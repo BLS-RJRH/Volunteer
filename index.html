@@ -172,6 +172,23 @@
             location.reload();
         }
 
+        // ฟังก์ชันทำความสะอาดรูปแบบวันที่ให้แสดงเฉพาะ DD/MM/YYYY เสมอ
+        function cleanDate(dateStr) {
+            if (!dateStr) return '';
+            // ถ้าติดรูปแบบยาวของ JS ให้แปลงใหม่
+            if (dateStr.includes('GMT') || dateStr.includes('Nov') || dateStr.includes('Oct') || dateStr.includes('Dec') || dateStr.includes('Jan') || dateStr.includes('Feb') || dateStr.includes('Mar') || dateStr.includes('Apr') || dateStr.includes('May') || dateStr.includes('Jun') || dateStr.includes('Jul') || dateStr.includes('Aug') || dateStr.includes('Sep')) {
+                const d = new Date(dateStr);
+                if (!isNaN(d.getTime())) {
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const year = d.getFullYear();
+                    return `${day}/${month}/${year}`;
+                }
+            }
+            // ตัดเอาเฉพาะส่วนแรกก่อนเครื่องหมายคอมมาหรือช่องว่าง
+            return dateStr.split(',')[0].split('T')[0].trim();
+        }
+
         function loadDashboardData() {
             const pass = sessionStorage.getItem('admin_pass');
             if (!pass) { location.reload(); return; }
@@ -184,7 +201,12 @@
             .then(res => res.json())
             .then(res => {
                 if (res.status === 'success') {
-                    filterAndRender(res.data);
+                    // ทำความสะอาดข้อมูล Timestamp ทุกแถว
+                    const cleanedData = res.data.map(item => ({
+                        ...item,
+                        timestamp: cleanDate(item.timestamp)
+                    }));
+                    filterAndRender(cleanedData);
                 } else {
                     logout();
                 }
@@ -198,15 +220,12 @@
             const monthStr = document.getElementById('filter-month').value;
 
             let filtered = data.filter(item => {
-                // รองรับทั้งรูปแบบ DD/MM/YYYY และรูปแบบเก่า
                 let itemDateOnly = item.timestamp;
                 if (item.timestamp.includes('/')) {
                     const parts = item.timestamp.split('/');
                     if (parts.length === 3) {
                         itemDateOnly = `${parts[2]}-${parts[1]}-${parts[0]}`;
                     }
-                } else if (item.timestamp.includes('T')) {
-                    itemDateOnly = item.timestamp.split('T')[0];
                 }
 
                 if (monthStr) {
@@ -264,12 +283,11 @@
             document.getElementById('dashboard-empty-state').classList.remove('hidden');
         }
 
-        // ฟังก์ชันแปลงไฟล์ฟอนต์จาก GitHub ให้เป็น Base64 อัตโนมัติ แล้วสร้าง PDF ภาษาไทยสมบูรณ์
+        // ฟังก์ชัน Export PDF (หัวข้อภาษาไทย, ตัวหนังสือใหญ่ขึ้น และฟอนต์ THSarabunNew สมบูรณ์)
         async function exportToPDF() {
             try {
                 showToast("กำลังสร้างไฟล์ PDF...", "info");
                 
-                // ดึงไฟล์ THSarabunNew.ttf จาก repository บน GitHub ของคุณมาใช้งาน
                 const fontUrl = './THSarabunNew.ttf'; 
                 const fontResponse = await fetch(fontUrl);
                 const fontBlob = await fontResponse.blob();
@@ -282,17 +300,16 @@
                     const { jsPDF } = window.jspdf;
                     const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
 
-                    // เพิ่มฟอนต์ภาษาไทยลงในระบบ Virtual File System ของ jsPDF
                     doc.addFileToVFS("THSarabunNew.ttf", base64data);
                     doc.addFont("THSarabunNew.ttf", "THSarabunNew", "normal");
                     doc.setFont("THSarabunNew");
 
-                    doc.setFontSize(16);
-                    doc.text("Wound Care Kits - Submission Summary Report", 14, 15);
+                    doc.setFontSize(18);
+                    doc.text("รายงานสรุปข้อมูลนำส่งอุปกรณ์ทำแผล", 14, 15);
 
-                    doc.setFontSize(10);
+                    doc.setFontSize(12);
                     doc.setTextColor(100);
-                    doc.text(`Generated Date: ${new Date().toLocaleDateString('th-TH')}`, 14, 21);
+                    doc.text(`วันที่ออกรายงาน: ${new Date().toLocaleDateString('th-TH')}`, 14, 22);
 
                     const rows = [];
                     document.querySelectorAll('#table-data-body tr').forEach(tr => {
@@ -313,29 +330,30 @@
                         return;
                     }
 
-                    const headers = ['Timestamp', 'Nickname', 'Foundation', 'Cases', 'Sets'];
+                    // เปลี่ยนหัวข้อตารางเป็นภาษาไทย
+                    const headers = ['วันที่/เวลา', 'ชื่อเล่น', 'มูลนิธิ', 'จำนวนเคส', 'อุปกรณ์ที่ต้องแจก'];
                     const colWidths = [42, 35, 55, 25, 25];
-                    let startY = 26;
+                    let startY = 28;
 
                     doc.setFillColor(79, 70, 229);
-                    doc.rect(14, startY, 182, 8, 'F');
+                    doc.rect(14, startY, 182, 9, 'F');
                     doc.setTextColor(255, 255, 255);
                     doc.setFont("THSarabunNew", "normal");
-                    doc.setFontSize(12);
+                    doc.setFontSize(14); // ขยายขนาดตัวหนังสือหัวตาราง
 
                     let startX = 14;
                     headers.forEach((h, i) => {
-                        doc.text(h, startX + 2, startY + 6);
+                        doc.text(h, startX + 2, startY + 6.5);
                         startX += colWidths[i];
                     });
 
-                    startY += 8;
-                    doc.setFontSize(12);
+                    startY += 9;
+                    doc.setFontSize(14); // ขยายขนาดตัวหนังสือเนื้อหาในตาราง
                     
                     rows.forEach((row, idx) => {
                         if (idx % 2 === 1) {
                             doc.setFillColor(248, 250, 252);
-                            doc.rect(14, startY, 182, 8, 'F');
+                            doc.rect(14, startY, 182, 9, 'F');
                         }
                         doc.setTextColor(51, 65, 85);
                         startX = 14;
@@ -343,10 +361,10 @@
                             let textToPrint = cell;
                             if (textToPrint.length > 25) textToPrint = textToPrint.substring(0, 25) + '...';
                             
-                            doc.text(textToPrint, startX + 2, startY + 6);
+                            doc.text(textToPrint, startX + 2, startY + 6.5);
                             startX += colWidths[i];
                         });
-                        startY += 8;
+                        startY += 9;
                         if (startY > 270) { doc.addPage(); startY = 20; }
                     });
 
