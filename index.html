@@ -3,13 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบบันทึกและสรุปข้อมูลนำส่งอุปกรณ์ทำแผล</title>
+    <title>Dashboard เจ้าหน้าที่ - ระบบเบิกอุปกรณ์ทำแผล</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- jsPDF และ jsPDF-AutoTable สำหรับ Export PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <style> body { font-family: 'Prompt', sans-serif; } </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
@@ -17,189 +15,107 @@
     <header class="bg-indigo-600 text-white shadow-md">
         <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
             <h1 class="text-lg md:text-xl font-semibold flex items-center gap-2">
-                <i class="fa-solid fa-kit-medical"></i> ระบบจัดการเบิกอุปกรณ์ทำแผล
+                <i class="fa-solid fa-shield-halved"></i> Dashboard เจ้าหน้าที่ - จัดการเบิกอุปกรณ์ทำแผล
             </h1>
-            <div id="nav-actions" class="hidden flex items-center gap-3">
-                <span class="bg-indigo-700 text-xs px-2.5 py-1 rounded-full font-medium">เจ้าหน้าที่</span>
-                <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white text-sm px-3 py-1.5 rounded-lg transition shadow">
-                    <i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบ
-                </button>
-            </div>
+            <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white text-sm px-3 py-1.5 rounded-lg transition shadow">
+                <i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบ
+            </button>
         </div>
     </header>
 
-    <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6">
-
-        <!-- 1. ฟอร์มสำหรับอาสาสมัคร -->
-        <div id="view-form" class="max-w-xl mx-auto bg-white rounded-2xl shadow-xl p-6 md:p-8 border border-slate-100">
-            <div class="text-center mb-6">
-                <div class="inline-block p-3 bg-indigo-50 text-indigo-600 rounded-full mb-2">
-                    <i class="fa-solid fa-file-pen text-2xl text-indigo-600"></i>
-                </div>
-                <h2 class="text-2xl font-bold text-slate-800">แบบฟอร์มแจ้งข้อมูลนำส่ง</h2>
-                <p class="text-sm text-slate-500 mt-1">เพื่อนำไปเบิกอุปกรณ์ทำแผลที่ค้างจ่าย</p>
-            </div>
-
-            <div class="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg mb-6 text-xs md:text-sm text-amber-800">
-                <p class="font-semibold flex items-center gap-1.5 mb-1"><i class="fa-solid fa-shield-halved"></i> นโยบายความเป็นส่วนตัว</p>
-                <p>การเก็บข้อมูลนี้เป็นการเก็บข้อมูลเพื่อทำสถิติผู้บาดเจ็บเท่านั้น จะไม่มีการนำข้อมูลนี้ไปเผยแพร่ในทุกกรณี</p>
-            </div>
-
-            <form id="submit-form" onsubmit="handleFormSubmit(event)" class="space-y-4">
-                <!-- ชื่อเล่น -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6 space-y-6">
+        <div class="bg-white rounded-2xl shadow-md p-6 border border-slate-100">
+            <h3 class="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-filter text-indigo-600"></i> ค้นหาและกรองข้อมูลรายงาน
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">ชื่อเล่น <span class="text-red-500">*</span></label>
-                    <input type="text" id="nickname" required placeholder="ระบุชื่อเล่นของคุณ" 
-                        class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                    <label class="block text-xs font-medium text-slate-600 mb-1">ตั้งแต่วันที่ (X)</label>
+                    <input type="date" id="date-start" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
                 </div>
-
-                <!-- มูลนิธิ (Dropdown) -->
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">มูลนิธิ <span class="text-red-500">*</span></label>
-                    <select id="foundation-select" required onchange="handleFoundationChange()"
-                        class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
-                        <option value="">-- กรุณาเลือกมูลนิธิ --</option>
-                        <option value="ป่อเต็กตึ๊ง">ป่อเต็กตึ๊ง</option>
-                        <option value="ร่วมกตัญญู">ร่วมกตัญญู</option>
-                        <option value="พิรุณ">พิรุณ</option>
-                        <option value="อื่นๆ">อื่นๆ (ระบุ)</option>
-                    </select>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">ถึงวันที่ (Y)</label>
+                    <input type="date" id="date-end" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
                 </div>
-
-                <!-- ช่องกรอกอื่นๆ -->
-                <div id="foundation-other-container" class="hidden">
-                    <label class="block text-sm font-medium text-slate-700 mb-1">ระบุชื่อมูลนิธิ/สังกัด <span class="text-red-500">*</span></label>
-                    <input type="text" id="foundation-other" placeholder="ระบุชื่อมูลนิธิของคุณ" 
-                        class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
-                </div>
-
-                <!-- จำนวนเคสที่ส่ง -->
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">จำนวนเคสที่ส่ง (คน/เคส) <span class="text-red-500">*</span></label>
-                    <input type="number" id="cases_count" min="1" required placeholder="ระบุจำนวนเคส" 
-                        class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                    <label class="block text-xs font-medium text-slate-600 mb-1">หรือเลือกจากเดือน</label>
+                    <input type="month" id="filter-month" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
                 </div>
-
-                <button type="submit" id="submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl shadow-lg shadow-indigo-200 transition flex items-center justify-center gap-2 mt-6">
-                    <i class="fa-solid fa-paper-plane"></i> ยืนยันการส่งข้อมูล
-                </button>
-            </form>
-
-            <div class="mt-8 pt-6 border-t border-slate-100 text-center">
-                <button onclick="openLoginModal()" class="text-xs text-slate-400 hover:text-indigo-600 transition underline">
-                    <i class="fa-solid fa-lock"></i> สำหรับเจ้าหน้าที่ (เข้าสู่ Dashboard)
-                </button>
+                <div class="flex gap-2">
+                    <button onclick="loadDashboardData()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-xl text-sm transition shadow">
+                        <i class="fa-solid fa-magnifying-glass mr-1"></i> ค้นหา
+                    </button>
+                    <button onclick="resetSearch()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2 px-3 rounded-xl text-sm transition" title="ล้างข้อมูล">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                </div>
             </div>
         </div>
 
-        <!-- 2. หน้า Dashboard -->
-        <div id="view-dashboard" class="hidden space-y-6">
-            <div class="bg-white rounded-2xl shadow-md p-6 border border-slate-100">
-                <h3 class="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                    <i class="fa-solid fa-filter text-indigo-600"></i> ค้นหาและกรองข้อมูลรายงาน
-                </h3>
-                
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+        <div id="dashboard-result-container" class="hidden space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-white rounded-2xl p-6 shadow-md border border-slate-100 flex items-center justify-between">
                     <div>
-                        <label class="block text-xs font-medium text-slate-600 mb-1">ตั้งแต่วันที่ (X)</label>
-                        <input type="date" id="date-start" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+                        <p class="text-sm font-medium text-slate-500">จำนวนเคสรวมทั้งหมด</p>
+                        <h4 id="stat-total-cases" class="text-3xl font-bold text-indigo-600 mt-1">0</h4>
                     </div>
+                    <div class="p-4 bg-indigo-50 text-indigo-600 rounded-2xl text-xl"><i class="fa-solid fa-users-rectangle"></i></div>
+                </div>
+                <div class="bg-white rounded-2xl p-6 shadow-md border border-slate-100 flex items-center justify-between">
                     <div>
-                        <label class="block text-xs font-medium text-slate-600 mb-1">ถึงวันที่ (Y)</label>
-                        <input type="date" id="date-end" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+                        <p class="text-sm font-medium text-slate-500">จำนวนเซ็ทอุปกรณ์ที่ต้องแจกให้อาสา</p>
+                        <h4 id="stat-total-sets" class="text-3xl font-bold text-emerald-600 mt-1">0</h4>
                     </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-600 mb-1">หรือเลือกจากเดือน</label>
-                        <input type="month" id="filter-month" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="loadDashboardData()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-xl text-sm transition shadow">
-                            <i class="fa-solid fa-magnifying-glass mr-1"></i> ค้นหา
-                        </button>
-                        <button onclick="resetSearch()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2 px-3 rounded-xl text-sm transition" title="ล้างข้อมูลการค้นหา">
-                            <i class="fa-solid fa-rotate-right"></i>
-                        </button>
-                    </div>
+                    <div class="p-4 bg-emerald-50 text-emerald-600 rounded-2xl text-xl"><i class="fa-solid fa-box-open"></i></div>
                 </div>
             </div>
 
-            <div id="dashboard-result-container" class="hidden space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="bg-white rounded-2xl p-6 shadow-md border border-slate-100 flex items-center justify-between">
-                        <div>
-                            <p class="text-sm font-medium text-slate-500">จำนวนเคสรวมทั้งหมด</p>
-                            <h4 id="stat-total-cases" class="text-3xl font-bold text-indigo-600 mt-1">0</h4>
-                        </div>
-                        <div class="p-4 bg-indigo-50 text-indigo-600 rounded-2xl text-xl">
-                            <i class="fa-solid fa-users-rectangle"></i>
-                        </div>
-                    </div>
-                    <div class="bg-white rounded-2xl p-6 shadow-md border border-slate-100 flex items-center justify-between">
-                        <div>
-                            <p class="text-sm font-medium text-slate-500">จำนวนเซ็ทอุปกรณ์ที่ต้องแจกให้อาสา</p>
-                            <h4 id="stat-total-sets" class="text-3xl font-bold text-emerald-600 mt-1">0</h4>
-                        </div>
-                        <div class="p-4 bg-emerald-50 text-emerald-600 rounded-2xl text-xl">
-                            <i class="fa-solid fa-box-open"></i>
-                        </div>
-                    </div>
+            <div class="bg-white rounded-2xl shadow-md overflow-hidden border border-slate-100">
+                <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center flex-wrap gap-4">
+                    <h4 class="font-semibold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-table text-indigo-600"></i> รายชื่อผู้นำส่งและยอดอุปกรณ์ที่ต้องแจก
+                    </h4>
+                    <button onclick="exportToPDF()" class="bg-rose-600 hover:bg-rose-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition shadow flex items-center gap-2">
+                        <i class="fa-solid fa-file-pdf"></i> Export เป็น PDF
+                    </button>
                 </div>
-
-                <div class="bg-white rounded-2xl shadow-md overflow-hidden border border-slate-100">
-                    <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center flex-wrap gap-4">
-                        <h4 class="font-semibold text-slate-800 flex items-center gap-2">
-                            <i class="fa-solid fa-table text-indigo-600"></i> รายชื่อผู้นำส่งและยอดอุปกรณ์ที่ต้องแจก
-                        </h4>
-                        <button onclick="exportToPDF()" class="bg-rose-600 hover:bg-rose-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition shadow flex items-center gap-2">
-                            <i class="fa-solid fa-file-pdf"></i> Export เป็น PDF
-                        </button>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse text-sm">
-                            <thead>
-                                <tr class="bg-slate-50 text-slate-600 border-b border-slate-200">
-                                    <th class="py-3 px-4">ประทับเวลา</th>
-                                    <th class="py-3 px-4">ชื่อเล่น</th>
-                                    <th class="py-3 px-4">มูลนิธิ</th>
-                                    <th class="py-3 px-4 text-right">จำนวนเคสที่ส่ง</th>
-                                    <th class="py-3 px-4 text-right">เซ็ทอุปกรณ์ที่ต้องแจก (ชุด)</th>
-                                </tr>
-                            </thead>
-                            <tbody id="table-data-body" class="divide-y divide-slate-100"></tbody>
-                        </table>
-                    </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 border-b border-slate-200">
+                                <th class="py-3 px-4">ประทับเวลา</th>
+                                <th class="py-3 px-4">ชื่อเล่น</th>
+                                <th class="py-3 px-4">มูลนิธิ</th>
+                                <th class="py-3 px-4 text-right">จำนวนเคสที่ส่ง</th>
+                                <th class="py-3 px-4 text-right">เซ็ทอุปกรณ์ที่ต้องแจก (ชุด)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-data-body" class="divide-y divide-slate-100"></tbody>
+                    </table>
                 </div>
-            </div>
-
-            <div id="dashboard-empty-state" class="bg-white rounded-2xl shadow-md p-12 text-center border border-slate-100">
-                <div class="inline-block p-4 bg-slate-100 text-slate-400 rounded-full mb-3 text-3xl">
-                    <i class="fa-solid fa-magnifying-glass-chart"></i>
-                </div>
-                <h4 class="text-lg font-semibold text-slate-700">กรุณาเลือกช่วงเวลาและกดปุ่ม "ค้นหา"</h4>
-                <p class="text-sm text-slate-400 mt-1">ข้อมูลและสรุปยอดอุปกรณ์จะแสดงขึ้นเมื่อคุณทำการค้นหา</p>
             </div>
         </div>
 
+        <div id="dashboard-empty-state" class="bg-white rounded-2xl shadow-md p-12 text-center border border-slate-100">
+            <div class="inline-block p-4 bg-slate-100 text-slate-400 rounded-full mb-3 text-3xl"><i class="fa-solid fa-magnifying-glass-chart"></i></div>
+            <h4 class="text-lg font-semibold text-slate-700">กรุณาเลือกช่วงเวลาและกดปุ่ม "ค้นหา"</h4>
+            <p class="text-sm text-slate-400 mt-1">ข้อมูลและสรุปยอดอุปกรณ์จะแสดงขึ้นเมื่อคุณทำการค้นหา</p>
+        </div>
     </main>
 
-    <!-- Modal ล็อกอิน -->
-    <div id="login-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <!-- Modal ล็อกอิน (รองรับกด Enter และ Esc) -->
+    <div id="login-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-slate-100">
             <div class="text-center mb-4">
-                <div class="inline-block p-3 bg-indigo-50 text-indigo-600 rounded-full mb-2">
-                    <i class="fa-solid fa-lock text-xl text-indigo-600"></i>
-                </div>
+                <div class="inline-block p-3 bg-indigo-50 text-indigo-600 rounded-full mb-2"><i class="fa-solid fa-lock text-xl text-indigo-600"></i></div>
                 <h3 class="text-lg font-bold text-slate-800">เข้าสู่ระบบ Dashboard</h3>
-                <p class="text-xs text-slate-500 mt-0.5">กด [Enter] เพื่อเข้าสู่ระบบ หรือ [Esc] เพื่อยกเลิก</p>
+                <p class="text-xs text-slate-500 mt-0.5">กด [Enter] เพื่อเข้าสู่ระบบ หรือ [Esc] เพื่อล้างค่า</p>
             </div>
             <form onsubmit="handleLogin(event)" class="space-y-4">
                 <input type="password" id="login-password" required placeholder="รหัสผ่าน" 
                     class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 text-center tracking-widest">
                 <div id="login-error" class="text-xs text-red-500 text-center hidden">รหัสผ่านไม่ถูกต้อง</div>
-                <div class="flex gap-2">
-                    <button type="button" onclick="closeLoginModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 rounded-xl text-sm font-medium">ยกเลิก</button>
-                    <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl text-sm font-medium shadow">เข้าสู่ระบบ</button>
-                </div>
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl text-sm font-medium shadow">เข้าสู่ระบบ</button>
             </form>
         </div>
     </div>
@@ -210,85 +126,28 @@
     </div>
 
     <script>
-        // ใส่ Web App URL ของคุณที่ได้จากการ Deploy Google Apps Script ที่นี่
-        const API_URL = "https://script.google.com/macros/s/AKfycbwg2KPk-wAhZC7YfhOuYYTzXJ4hlY-CvMJ_zMGblVPAdcEKiQRfYMWtcUbU6yIBeylW/exec";
+        // ใส่ Web App URL ของ Google Apps Script ที่นี่
+        const API_URL = "https://script.google.com/macros/s/AKfycbzts9TAgkwJE7YF7NAf8-22E-RLwfYa4iFKaG35RsEfcUgPWVK6ViJITOjakHCztvU/exec";
 
-        function handleFoundationChange() {
-            const selectVal = document.getElementById('foundation-select').value;
-            const otherContainer = document.getElementById('foundation-other-container');
-            const otherInput = document.getElementById('foundation-other');
-            
-            if (selectVal === 'อื่นๆ') {
-                otherContainer.classList.remove('hidden');
-                otherInput.required = true;
+        window.onload = function() {
+            const savedPass = sessionStorage.getItem('admin_pass');
+            if (savedPass) {
+                document.getElementById('login-modal').classList.add('hidden');
             } else {
-                otherContainer.classList.add('hidden');
-                otherInput.required = false;
-                otherInput.value = '';
+                document.getElementById('login-password').focus();
+                window.addEventListener('keydown', handleModalKeydown);
             }
-        }
-
-        function handleFormSubmit(e) {
-            e.preventDefault();
-            const btn = document.getElementById('submit-btn');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังบันทึก...';
-
-            let foundationVal = document.getElementById('foundation-select').value;
-            if (foundationVal === 'อื่นๆ') {
-                foundationVal = document.getElementById('foundation-other').value.trim();
-            }
-
-            const payload = {
-                action: 'submit',
-                nickname: document.getElementById('nickname').value.trim(),
-                foundation: foundationVal,
-                cases: parseInt(document.getElementById('cases_count').value)
-            };
-
-            fetch(API_URL, {
-                method: 'POST',
-                mode: 'no-cors', // สำหรับข้าม CORS ของ GAS ง่ายๆ
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            }).then(() => {
-                showToast('บันทึกข้อมูลสำเร็จเรียบร้อยครับ', 'success');
-                document.getElementById('submit-form').reset();
-                handleFoundationChange();
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> ยืนยันการส่งข้อมูล';
-            }).catch(err => {
-                showToast('เกิดข้อผิดพลาดในการเชื่อมต่อ', 'error');
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> ยืนยันการส่งข้อมูล';
-            });
-        }
-
-        function openLoginModal() {
-            const modal = document.getElementById('login-modal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            document.getElementById('login-password').value = '';
-            document.getElementById('login-error').classList.add('hidden');
-            document.getElementById('login-password').focus();
-            window.addEventListener('keydown', handleModalKeydown);
-        }
-
-        function closeLoginModal() {
-            const modal = document.getElementById('login-modal');
-            modal.classList.remove('flex');
-            modal.classList.add('hidden');
-            window.removeEventListener('keydown', handleModalKeydown);
         }
 
         function handleModalKeydown(e) {
-            if (e.key === 'Escape') closeLoginModal();
+            if (e.key === 'Escape') {
+                document.getElementById('login-password').value = '';
+            }
         }
 
         function handleLogin(e) {
             e.preventDefault();
             const pass = document.getElementById('login-password').value;
-            
             fetch(API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -297,9 +156,8 @@
             .then(res => res.json())
             .then(res => {
                 if (res.status === 'success') {
-                    closeLoginModal();
+                    document.getElementById('login-modal').classList.add('hidden');
                     sessionStorage.setItem('admin_pass', pass);
-                    showDashboardView();
                     showToast('เข้าสู่ระบบสำเร็จ', 'success');
                 } else {
                     document.getElementById('login-error').classList.remove('hidden');
@@ -312,27 +170,13 @@
 
         function logout() {
             sessionStorage.removeItem('admin_pass');
-            document.getElementById('view-dashboard').classList.add('hidden');
-            document.getElementById('view-form').classList.remove('hidden');
-            document.getElementById('nav-actions').classList.add('hidden');
-            showToast('ออกจากระบบแล้ว', 'info');
-        }
-
-        function showDashboardView() {
-            document.getElementById('view-form').classList.add('hidden');
-            document.getElementById('view-dashboard').classList.remove('hidden');
-            document.getElementById('nav-actions').classList.remove('hidden');
-            resetSearch();
-        }
-
-        window.onload = function() {
-            if (sessionStorage.getItem('admin_pass')) {
-                showDashboardView();
-            }
+            location.reload();
         }
 
         function loadDashboardData() {
-            const pass = sessionStorage.getItem('admin_pass') || '1234';
+            const pass = sessionStorage.getItem('admin_pass');
+            if (!pass) { location.reload(); return; }
+
             fetch(API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -344,12 +188,9 @@
                     filterAndRender(res.data);
                 } else {
                     logout();
-                    openLoginModal();
                 }
             })
-            .catch(() => {
-                showToast('ไม่สามารถดึงข้อมูลได้', 'error');
-            });
+            .catch(() => showToast('ไม่สามารถดึงข้อมูลได้', 'error'));
         }
 
         function filterAndRender(data) {
@@ -416,7 +257,6 @@
             document.getElementById('dashboard-empty-state').classList.remove('hidden');
         }
 
-        // Export PDF แบบวาดตารางพิกัดปลอดภัย รองรับภาษาไทย 100%
         function exportToPDF() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
@@ -434,13 +274,7 @@
             document.querySelectorAll('#table-data-body tr').forEach(tr => {
                 const cols = tr.querySelectorAll('td');
                 if (cols.length === 5) {
-                    rows.push([
-                        cols[0].innerText.trim(), 
-                        cols[1].innerText.trim(), 
-                        cols[2].innerText.trim(), 
-                        cols[3].innerText.trim(), 
-                        cols[4].innerText.trim()
-                    ]);
+                    rows.push([cols[0].innerText.trim(), cols[1].innerText.trim(), cols[2].innerText.trim(), cols[3].innerText.trim(), cols[4].innerText.trim()]);
                 }
             });
 
