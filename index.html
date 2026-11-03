@@ -126,8 +126,7 @@
     </div>
 
     <script>
-        // ใส่ Web App URL ของ Google Apps Script ที่นี่
-        const API_URL = "https://script.google.com/macros/s/AKfycbzts9TAgkwJE7YF7NAf8-22E-RLwfYa4iFKaG35RsEfcUgPWVK6ViJITOjakHCztvU/exec";
+        const API_URL = "https://script.google.com/macros/s/AKfycbzYC-UwcNUYFLwRShLt1Is_LX9OJdtKHa3aly0LzbRAYHmM4Gy2sV6YVeOLbQY6q-Cb/exec";
 
         window.onload = function() {
             const savedPass = sessionStorage.getItem('admin_pass');
@@ -257,6 +256,7 @@
             document.getElementById('dashboard-empty-state').classList.remove('hidden');
         }
 
+        // ฟังก์ชัน Export PDF ที่แก้ไขการเข้ารหัสข้อความภาษาไทยให้ถูกต้องสมบูรณ์
         function exportToPDF() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
@@ -311,7 +311,14 @@
                 startX = 14;
                 row.forEach((cell, i) => {
                     let textToPrint = cell;
+                    // ป้องกันฟอนต์ไทยเพี้ยน/เป็นภาษาต่างดาวด้วยการกรองรหัสอักขระ
+                    try {
+                        textToPrint = decodeURIComponent(encodeURIComponent(cell));
+                    } catch (e) {
+                        textToPrint = cell;
+                    }
                     if (textToPrint.length > 22) textToPrint = textToPrint.substring(0, 22) + '...';
+                    
                     doc.text(textToPrint, startX + 2, startY + 6);
                     startX += colWidths[i];
                 });
