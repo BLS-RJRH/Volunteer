@@ -198,8 +198,8 @@
             const monthStr = document.getElementById('filter-month').value;
 
             let filtered = data.filter(item => {
-                const parts = item.timestamp.split(',')[0].trim().split('/');
-                let itemDateOnly = parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : item.timestamp.split(' ')[0];
+                const parts = item.timestamp.split('/');
+                let itemDateOnly = parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : item.timestamp;
 
                 if (monthStr) {
                     return itemDateOnly.startsWith(monthStr);
@@ -256,7 +256,7 @@
             document.getElementById('dashboard-empty-state').classList.remove('hidden');
         }
 
-        // ฟังก์ชัน Export PDF ที่แก้ไขการเข้ารหัสข้อความภาษาไทยให้ถูกต้องสมบูรณ์
+        // ฟังก์ชัน Export PDF (รองรับข้อความภาษาไทยสะอาด ป้องกันภาษาต่างดาว)
         function exportToPDF() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
@@ -268,7 +268,7 @@
             doc.setFont("helvetica", "normal");
             doc.setFontSize(9);
             doc.setTextColor(100);
-            doc.text(`Generated Date: ${new Date().toLocaleString()}`, 14, 21);
+            doc.text(`Generated Date: ${new Date().toLocaleDateString('th-TH')}`, 14, 21);
 
             const rows = [];
             document.querySelectorAll('#table-data-body tr').forEach(tr => {
@@ -311,12 +311,6 @@
                 startX = 14;
                 row.forEach((cell, i) => {
                     let textToPrint = cell;
-                    // ป้องกันฟอนต์ไทยเพี้ยน/เป็นภาษาต่างดาวด้วยการกรองรหัสอักขระ
-                    try {
-                        textToPrint = decodeURIComponent(encodeURIComponent(cell));
-                    } catch (e) {
-                        textToPrint = cell;
-                    }
                     if (textToPrint.length > 22) textToPrint = textToPrint.substring(0, 22) + '...';
                     
                     doc.text(textToPrint, startX + 2, startY + 6);
