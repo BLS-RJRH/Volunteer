@@ -103,7 +103,7 @@
         </div>
     </main>
 
-    <!-- Modal ล็อกอิน (รองรับกด Enter และ Esc) -->
+    <!-- Modal ล็อกอิน -->
     <div id="login-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-slate-100">
             <div class="text-center mb-4">
@@ -198,8 +198,16 @@
             const monthStr = document.getElementById('filter-month').value;
 
             let filtered = data.filter(item => {
-                const parts = item.timestamp.split('/');
-                let itemDateOnly = parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : item.timestamp;
+                // รองรับทั้งรูปแบบ DD/MM/YYYY และรูปแบบเก่า
+                let itemDateOnly = item.timestamp;
+                if (item.timestamp.includes('/')) {
+                    const parts = item.timestamp.split('/');
+                    if (parts.length === 3) {
+                        itemDateOnly = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                    }
+                } else if (item.timestamp.includes('T')) {
+                    itemDateOnly = item.timestamp.split('T')[0];
+                }
 
                 if (monthStr) {
                     return itemDateOnly.startsWith(monthStr);
@@ -256,72 +264,99 @@
             document.getElementById('dashboard-empty-state').classList.remove('hidden');
         }
 
-        // ฟังก์ชัน Export PDF (รองรับข้อความภาษาไทยสะอาด ป้องกันภาษาต่างดาว)
-        function exportToPDF() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+        // ฟังก์ชันแปลงไฟล์ฟอนต์จาก GitHub ให้เป็น Base64 อัตโนมัติ แล้วสร้าง PDF ภาษาไทยสมบูรณ์
+        async function exportToPDF() {
+            try {
+                showToast("กำลังสร้างไฟล์ PDF...", "info");
+                
+                // ดึงไฟล์ THSarabunNew.ttf จาก repository บน GitHub ของคุณมาใช้งาน
+                const fontUrl = './THSarabunNew.ttf'; 
+                const fontResponse = await fetch(fontUrl);
+                const fontBlob = await fontResponse.blob();
+                
+                const reader = new FileReader();
+                reader.readAsDataURL(fontBlob);
+                reader.onloadend = async function() {
+                    const base64data = reader.result.split(',')[1];
 
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(14);
-            doc.text("Wound Care Kits - Submission Summary Report", 14, 15);
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
 
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(9);
-            doc.setTextColor(100);
-            doc.text(`Generated Date: ${new Date().toLocaleDateString('th-TH')}`, 14, 21);
+                    // เพิ่มฟอนต์ภาษาไทยลงในระบบ Virtual File System ของ jsPDF
+                    doc.addFileToVFS("THSarabunNew.ttf", base64data);
+                    doc.addFont("THSarabunNew.ttf", "THSarabunNew", "normal");
+                    doc.setFont("THSarabunNew");
 
-            const rows = [];
-            document.querySelectorAll('#table-data-body tr').forEach(tr => {
-                const cols = tr.querySelectorAll('td');
-                if (cols.length === 5) {
-                    rows.push([cols[0].innerText.trim(), cols[1].innerText.trim(), cols[2].innerText.trim(), cols[3].innerText.trim(), cols[4].innerText.trim()]);
-                }
-            });
+                    doc.setFontSize(16);
+                    doc.text("Wound Care Kits - Submission Summary Report", 14, 15);
 
-            if (rows.length === 0 || (rows.length === 1 && rows[0][0].includes("ไม่พบข้อมูล"))) {
-                showToast("ไม่มีข้อมูลสำหรับ Export เป็น PDF", "error");
-                return;
-            }
+                    doc.setFontSize(10);
+                    doc.setTextColor(100);
+                    doc.text(`Generated Date: ${new Date().toLocaleDateString('th-TH')}`, 14, 21);
 
-            const headers = ['Timestamp', 'Nickname', 'Foundation', 'Cases', 'Sets'];
-            const colWidths = [42, 35, 55, 25, 25];
-            let startY = 28;
+                    const rows = [];
+                    document.querySelectorAll('#table-data-body tr').forEach(tr => {
+                        const cols = tr.querySelectorAll('td');
+                        if (cols.length === 5) {
+                            rows.push([
+                                cols[0].innerText.trim(), 
+                                cols[1].innerText.trim(), 
+                                cols[2].innerText.trim(), 
+                                cols[3].innerText.trim(), 
+                                cols[4].innerText.trim()
+                            ]);
+                        }
+                    });
 
-            doc.setFillColor(79, 70, 229);
-            doc.rect(14, startY, 182, 8, 'F');
-            doc.setTextColor(255, 255, 255);
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(9);
+                    if (rows.length === 0 || (rows.length === 1 && rows[0][0].includes("ไม่พบข้อมูล"))) {
+                        showToast("ไม่มีข้อมูลสำหรับ Export เป็น PDF", "error");
+                        return;
+                    }
 
-            let startX = 14;
-            headers.forEach((h, i) => {
-                doc.text(h, startX + 2, startY + 6);
-                startX += colWidths[i];
-            });
+                    const headers = ['Timestamp', 'Nickname', 'Foundation', 'Cases', 'Sets'];
+                    const colWidths = [42, 35, 55, 25, 25];
+                    let startY = 26;
 
-            startY += 8;
-            doc.setFont("helvetica", "normal");
-            
-            rows.forEach((row, idx) => {
-                if (idx % 2 === 1) {
-                    doc.setFillColor(248, 250, 252);
+                    doc.setFillColor(79, 70, 229);
                     doc.rect(14, startY, 182, 8, 'F');
-                }
-                doc.setTextColor(51, 65, 85);
-                startX = 14;
-                row.forEach((cell, i) => {
-                    let textToPrint = cell;
-                    if (textToPrint.length > 22) textToPrint = textToPrint.substring(0, 22) + '...';
-                    
-                    doc.text(textToPrint, startX + 2, startY + 6);
-                    startX += colWidths[i];
-                });
-                startY += 8;
-                if (startY > 270) { doc.addPage(); startY = 20; }
-            });
+                    doc.setTextColor(255, 255, 255);
+                    doc.setFont("THSarabunNew", "normal");
+                    doc.setFontSize(12);
 
-            doc.save(`Wound-Care-Report-${new Date().toISOString().slice(0,10)}.pdf`);
-            showToast("ดาวน์โหลดไฟล์ PDF สำเร็จ", "success");
+                    let startX = 14;
+                    headers.forEach((h, i) => {
+                        doc.text(h, startX + 2, startY + 6);
+                        startX += colWidths[i];
+                    });
+
+                    startY += 8;
+                    doc.setFontSize(12);
+                    
+                    rows.forEach((row, idx) => {
+                        if (idx % 2 === 1) {
+                            doc.setFillColor(248, 250, 252);
+                            doc.rect(14, startY, 182, 8, 'F');
+                        }
+                        doc.setTextColor(51, 65, 85);
+                        startX = 14;
+                        row.forEach((cell, i) => {
+                            let textToPrint = cell;
+                            if (textToPrint.length > 25) textToPrint = textToPrint.substring(0, 25) + '...';
+                            
+                            doc.text(textToPrint, startX + 2, startY + 6);
+                            startX += colWidths[i];
+                        });
+                        startY += 8;
+                        if (startY > 270) { doc.addPage(); startY = 20; }
+                    });
+
+                    doc.save(`Wound-Care-Report-${new Date().toISOString().slice(0,10)}.pdf`);
+                    showToast("ดาวน์โหลดไฟล์ PDF สำเร็จ", "success");
+                }
+            } catch (err) {
+                console.error(err);
+                showToast("ไม่สามารถโหลดไฟล์ฟอนต์ได้ ตรวจสอบชื่อไฟล์ THSarabunNew.ttf บน GitHub", "error");
+            }
         }
 
         function showToast(message, type = 'success') {
